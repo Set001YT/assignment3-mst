@@ -1,0 +1,248 @@
+import org.junit.jupiter.api.*;
+import static org.junit.jupiter.api.Assertions.*;
+import java.util.*;
+import graph.*;
+import algorithms.*;
+
+/**
+ * Automated tests for Prim's and Kruskal's algorithms
+ */
+public class MSTTest {
+
+    @Test
+    @DisplayName("Test 1: Small connected graph - Correctness")
+    public void testSmallConnectedGraph() {
+        List<String> nodes = Arrays.asList("A", "B", "C", "D");
+        List<Edge> edges = Arrays.asList(
+                new Edge("A", "B", 1),
+                new Edge("A", "C", 4),
+                new Edge("B", "C", 2),
+                new Edge("B", "D", 5),
+                new Edge("C", "D", 3)
+        );
+        Graph graph = new Graph(1, nodes, edges);
+
+        PrimAlgorithm prim = new PrimAlgorithm();
+        KruskalAlgorithm kruskal = new KruskalAlgorithm();
+
+        PrimAlgorithm.MSTResult primResult = prim.findMST(graph);
+        KruskalAlgorithm.MSTResult kruskalResult = kruskal.findMST(graph);
+
+        // Both should have same total cost
+        assertEquals(primResult.totalCost(), kruskalResult.totalCost(),
+                "Total MST cost should be identical for both algorithms");
+
+        // Expected MST cost
+        assertEquals(6, primResult.totalCost(), "MST cost should be 6");
+
+        // MST should have V-1 edges
+        assertEquals(graph.getVertexCount() - 1, primResult.mstEdges().size(),
+                "Prim: MST should have V-1 edges");
+        assertEquals(graph.getVertexCount() - 1, kruskalResult.mstEdges().size(),
+                "Kruskal: MST should have V-1 edges");
+    }
+
+    @Test
+    @DisplayName("Test 2: MST has no cycles")
+    public void testMSTIsAcyclic() {
+        List<String> nodes = Arrays.asList("A", "B", "C", "D", "E");
+        List<Edge> edges = Arrays.asList(
+                new Edge("A", "B", 4),
+                new Edge("A", "C", 3),
+                new Edge("B", "C", 2),
+                new Edge("B", "D", 5),
+                new Edge("C", "D", 7),
+                new Edge("C", "E", 8),
+                new Edge("D", "E", 6)
+        );
+        Graph graph = new Graph(2, nodes, edges);
+
+        PrimAlgorithm prim = new PrimAlgorithm();
+        PrimAlgorithm.MSTResult result = prim.findMST(graph);
+
+        assertTrue(isAcyclic(result.mstEdges(), graph.getNodes()),
+                "MST should be acyclic");
+    }
+
+    @Test
+    @DisplayName("Test 3: MST connects all vertices")
+    public void testMSTConnectsAllVertices() {
+        List<String> nodes = Arrays.asList("A", "B", "C", "D", "E");
+        List<Edge> edges = Arrays.asList(
+                new Edge("A", "B", 1),
+                new Edge("B", "C", 2),
+                new Edge("C", "D", 3),
+                new Edge("D", "E", 4)
+        );
+        Graph graph = new Graph(3, nodes, edges);
+
+        KruskalAlgorithm kruskal = new KruskalAlgorithm();
+        KruskalAlgorithm.MSTResult result = kruskal.findMST(graph);
+
+        assertTrue(connectsAllVertices(result.mstEdges(), graph.getNodes()),
+                "MST should connect all vertices");
+    }
+
+    @Test
+    @DisplayName("Test 4: Disconnected graph handling")
+    public void testDisconnectedGraph() {
+        List<String> nodes = Arrays.asList("A", "B", "C", "D");
+        List<Edge> edges = Arrays.asList(
+                new Edge("A", "B", 1),
+                new Edge("C", "D", 2)
+        );
+        Graph graph = new Graph(4, nodes, edges);
+
+        assertFalse(graph.isConnected(), "Graph should be disconnected");
+
+        PrimAlgorithm prim = new PrimAlgorithm();
+        PrimAlgorithm.MSTResult result = prim.findMST(graph);
+
+        // MST should have fewer than V-1 edges for disconnected graph
+        assertTrue(result.mstEdges().size() < graph.getVertexCount() - 1,
+                "Disconnected graph should produce incomplete MST");
+    }
+
+    @Test
+    @DisplayName("Test 5: Performance metrics are valid")
+    public void testPerformanceMetrics() {
+        List<String> nodes = Arrays.asList("A", "B", "C", "D", "E");
+        List<Edge> edges = Arrays.asList(
+                new Edge("A", "B", 1),
+                new Edge("B", "C", 2),
+                new Edge("C", "D", 3),
+                new Edge("D", "E", 4),
+                new Edge("A", "E", 5)
+        );
+        Graph graph = new Graph(5, nodes, edges);
+
+        PrimAlgorithm prim = new PrimAlgorithm();
+        KruskalAlgorithm kruskal = new KruskalAlgorithm();
+
+        PrimAlgorithm.MSTResult primResult = prim.findMST(graph);
+        KruskalAlgorithm.MSTResult kruskalResult = kruskal.findMST(graph);
+
+        // Execution time should be non-negative
+        assertTrue(primResult.executionTimeMs() >= 0,
+                "Prim execution time should be non-negative");
+        assertTrue(kruskalResult.executionTimeMs() >= 0,
+                "Kruskal execution time should be non-negative");
+
+        // Operation counts should be positive
+        assertTrue(primResult.operationsCount() > 0,
+                "Prim operations count should be positive");
+        assertTrue(kruskalResult.operationsCount() > 0,
+                "Kruskal operations count should be positive");
+    }
+
+    @Test
+    @DisplayName("Test 6: Results are reproducible")
+    public void testReproducibility() {
+        List<String> nodes = Arrays.asList("A", "B", "C", "D");
+        List<Edge> edges = Arrays.asList(
+                new Edge("A", "B", 1),
+                new Edge("B", "C", 2),
+                new Edge("C", "D", 3),
+                new Edge("A", "D", 7)
+        );
+        Graph graph = new Graph(6, nodes, edges);
+
+        PrimAlgorithm prim1 = new PrimAlgorithm();
+        PrimAlgorithm prim2 = new PrimAlgorithm();
+
+        PrimAlgorithm.MSTResult result1 = prim1.findMST(graph);
+        PrimAlgorithm.MSTResult result2 = prim2.findMST(graph);
+
+        assertEquals(result1.totalCost(), result2.totalCost(),
+                "Results should be reproducible - same cost");
+        assertEquals(result1.mstEdges().size(), result2.mstEdges().size(),
+                "Results should be reproducible - same edge count");
+    }
+
+    @Test
+    @DisplayName("Test 7: Empty graph")
+    public void testEmptyGraph() {
+        Graph graph = new Graph(7, new ArrayList<>(), new ArrayList<>());
+
+        PrimAlgorithm prim = new PrimAlgorithm();
+        PrimAlgorithm.MSTResult result = prim.findMST(graph);
+
+        assertEquals(0, result.totalCost(), "Empty graph should have 0 cost");
+        assertEquals(0, result.mstEdges().size(), "Empty graph should have 0 edges");
+    }
+
+    @Test
+    @DisplayName("Test 8: Single vertex graph")
+    public void testSingleVertex() {
+        List<String> nodes = List.of("A");
+        Graph graph = new Graph(8, nodes, new ArrayList<>());
+
+        KruskalAlgorithm kruskal = new KruskalAlgorithm();
+        KruskalAlgorithm.MSTResult result = kruskal.findMST(graph);
+
+        assertEquals(0, result.totalCost(), "Single vertex should have 0 cost");
+        assertEquals(0, result.mstEdges().size(), "Single vertex should have 0 edges");
+    }
+
+    // Helper method to check if MST is acyclic
+    private boolean isAcyclic(List<Edge> edges, List<String> nodes) {
+        Map<String, List<String>> graph = new HashMap<>();
+        for (String node : nodes) {
+            graph.put(node, new ArrayList<>());
+        }
+        for (Edge edge : edges) {
+            graph.get(edge.getFrom()).add(edge.getTo());
+            graph.get(edge.getTo()).add(edge.getFrom());
+        }
+
+        Set<String> visited = new HashSet<>();
+        return !hasCycleDFS(nodes.getFirst(), null, graph, visited);
+    }
+
+    private boolean hasCycleDFS(String node, String parent,
+                                Map<String, List<String>> graph,
+                                Set<String> visited) {
+        visited.add(node);
+        for (String neighbor : graph.get(node)) {
+            if (!visited.contains(neighbor)) {
+                if (hasCycleDFS(neighbor, node, graph, visited)) {
+                    return true;
+                }
+            } else if (!neighbor.equals(parent)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Helper method to check if MST connects all vertices
+    private boolean connectsAllVertices(List<Edge> edges, List<String> nodes) {
+        if (nodes.isEmpty()) return true;
+
+        Map<String, List<String>> graph = new HashMap<>();
+        for (String node : nodes) {
+            graph.put(node, new ArrayList<>());
+        }
+        for (Edge edge : edges) {
+            graph.get(edge.getFrom()).add(edge.getTo());
+            graph.get(edge.getTo()).add(edge.getFrom());
+        }
+
+        Set<String> visited = new HashSet<>();
+        Queue<String> queue = new LinkedList<>();
+        queue.offer(nodes.getFirst());
+        visited.add(nodes.getFirst());
+
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            for (String neighbor : graph.get(current)) {
+                if (!visited.contains(neighbor)) {
+                    visited.add(neighbor);
+                    queue.offer(neighbor);
+                }
+            }
+        }
+
+        return visited.size() == nodes.size();
+    }
+}
