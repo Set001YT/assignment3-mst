@@ -1,0 +1,10 @@
+Graph_ID,Type,Vertices,Edges,Density,Prim_Cost,Prim_Time_ms,Prim_Operations,Kruskal_Cost,Kruskal_Time_ms,Kruskal_Operations,Faster_Algorithm,Time_Difference_ms
+1,Small,4,5,0.83,14,0.89,18,14,0.64,20,Kruskal,0.25
+2,Small,5,6,0.60,14,0.04,23,14,0.03,26,Kruskal,0.01
+3,Small,6,9,0.60,20,0.03,34,20,0.02,37,Kruskal,0.01
+4,Medium,10,17,0.38,72,0.04,63,72,0.03,65,Kruskal,0.01
+5,Medium,12,20,0.30,73,0.06,78,73,0.03,81,Kruskal,0.03
+6,Medium,15,24,0.23,109,0.08,89,109,0.04,94,Kruskal,0.04
+7,Large,20,27,0.14,183,0.06,112,183,0.06,122,Kruskal,0.00
+8,Large,25,35,0.12,249,0.09,145,249,0.08,158,Kruskal,0.01
+9,Large,30,43,0.10,319,0.39,182,319,0.09,197,Kruskal,0.30
