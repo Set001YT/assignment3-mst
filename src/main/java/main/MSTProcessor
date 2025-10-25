@@ -1,0 +1,225 @@
+package main;
+
+import graph.*;
+import algorithms.*;
+import java.io.*;
+import java.util.*;
+import org.json.*;
+
+/**
+ * Main processor for reading input, running MST algorithms, and generating output
+ */
+public class MSTProcessor {
+
+    public static void main(String[] args) {
+        try {
+            String inputFile = args.length > 0 ? args[0] : "input.json";
+            String outputFile = args.length > 1 ? args[1] : "output.json";
+
+            System.out.println("=== MST Processor ===");
+            System.out.println("Input file: " + inputFile);
+            System.out.println("Output file: " + outputFile);
+            System.out.println();
+
+            processGraphs(inputFile, outputFile);
+
+            System.out.println("\n=== Processing Complete ===");
+            System.out.println("Check the following files:");
+            System.out.println("- " + outputFile + " (JSON results)");
+            System.out.println("- " + outputFile.replace(".json", ".csv") + " (CSV results)");
+
+        } catch (Exception e) {
+            System.err.println("Error: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    public static void processGraphs(String inputFile, String outputFile) throws IOException {
+        // Read input
+        List<Graph> graphs = readGraphsFromJson(inputFile);
+
+        // Process each graph
+        JSONArray results = new JSONArray();
+
+        for (Graph graph : graphs) {
+            System.out.println("\nProcessing " + graph);
+
+            // Run Prim's algorithm
+            PrimAlgorithm prim = new PrimAlgorithm();
+            PrimAlgorithm.MSTResult primResult = prim.findMST(graph);
+
+            // Run Kruskal's algorithm
+            KruskalAlgorithm kruskal = new KruskalAlgorithm();
+            KruskalAlgorithm.MSTResult kruskalResult = kruskal.findMST(graph);
+
+            // Build result JSON
+            JSONObject graphResult = new JSONObject();
+            graphResult.put("graph_id", graph.getId());
+
+            JSONObject inputStats = new JSONObject();
+            inputStats.put("vertices", graph.getVertexCount());
+            inputStats.put("edges", graph.getEdgeCount());
+            graphResult.put("input_stats", inputStats);
+
+            // Prim results
+            JSONObject primJson = new JSONObject();
+            primJson.put("mst_edges", edgesToJsonArray(primResult.mstEdges()));
+            primJson.put("total_cost", primResult.totalCost());
+            primJson.put("operations_count", primResult.operationsCount());
+            primJson.put("execution_time_ms", Math.round(primResult.executionTimeMs() * 100.0) / 100.0);
+            graphResult.put("prim", primJson);
+
+            // Kruskal results
+            JSONObject kruskalJson = new JSONObject();
+            kruskalJson.put("mst_edges", edgesToJsonArray(kruskalResult.mstEdges()));
+            kruskalJson.put("total_cost", kruskalResult.totalCost());
+            kruskalJson.put("operations_count", kruskalResult.operationsCount());
+            kruskalJson.put("execution_time_ms", Math.round(kruskalResult.executionTimeMs() * 100.0) / 100.0);
+            graphResult.put("kruskal", kruskalJson);
+
+            results.put(graphResult);
+
+            // Print summary
+            System.out.println("Prim: Cost=" + primResult.totalCost() +
+                    ", Ops=" + primResult.operationsCount() +
+                    ", Time=" + primResult.executionTimeMs() + "ms");
+            System.out.println("Kruskal: Cost=" + kruskalResult.totalCost() +
+                    ", Ops=" + kruskalResult.operationsCount() +
+                    ", Time=" + kruskalResult.executionTimeMs() + "ms");
+        }
+
+        // Write output
+        JSONObject output = new JSONObject();
+        output.put("results", results);
+
+        try (FileWriter file = new FileWriter(outputFile)) {
+            file.write(output.toString(2));
+        }
+
+        System.out.println("\nResults written to " + outputFile);
+
+        // Generate CSV file
+        String csvFile = outputFile.replace(".json", ".csv");
+        generateCSV(results, csvFile);
+        System.out.println("CSV results written to " + csvFile);
+    }
+
+    private static void generateCSV(JSONArray results, String csvFile) throws IOException {
+        StringBuilder csv = new StringBuilder();
+
+        // CSV Header
+        csv.append("Graph_ID,Type,Vertices,Edges,Density,");
+        csv.append("Prim_Cost,Prim_Time_ms,Prim_Operations,");
+        csv.append("Kruskal_Cost,Kruskal_Time_ms,Kruskal_Operations,");
+        csv.append("Faster_Algorithm,Time_Difference_ms\n");
+
+        // CSV Data
+        for (int i = 0; i < results.length(); i++) {
+            JSONObject result = results.getJSONObject(i);
+
+            int graphId = result.getInt("graph_id");
+            JSONObject stats = result.getJSONObject("input_stats");
+            int vertices = stats.getInt("vertices");
+            int edges = stats.getInt("edges");
+
+            // Calculate density
+            int maxEdges = vertices * (vertices - 1) / 2;
+            double density = maxEdges > 0 ? (double) edges / maxEdges : 0;
+
+            // Determine graph type
+            String type;
+            if (vertices <= 6) {
+                type = "Small";
+            } else if (vertices <= 15) {
+                type = "Medium";
+            } else {
+                type = "Large";
+            }
+
+            // Get algorithm results
+            JSONObject prim = result.getJSONObject("prim");
+            JSONObject kruskal = result.getJSONObject("kruskal");
+
+            int primCost = prim.getInt("total_cost");
+            double primTime = prim.getDouble("execution_time_ms");
+            int primOps = prim.getInt("operations_count");
+
+            int kruskalCost = kruskal.getInt("total_cost");
+            double kruskalTime = kruskal.getDouble("execution_time_ms");
+            int kruskalOps = kruskal.getInt("operations_count");
+
+            // Determine winner
+            String faster = primTime < kruskalTime ? "Prim" : "Kruskal";
+            double timeDiff = Math.abs(primTime - kruskalTime);
+
+            // Build CSV row
+            csv.append(graphId).append(",");
+            csv.append(type).append(",");
+            csv.append(vertices).append(",");
+            csv.append(edges).append(",");
+            csv.append(String.format("%.2f", density)).append(",");
+            csv.append(primCost).append(",");
+            csv.append(String.format("%.2f", primTime)).append(",");
+            csv.append(primOps).append(",");
+            csv.append(kruskalCost).append(",");
+            csv.append(String.format("%.2f", kruskalTime)).append(",");
+            csv.append(kruskalOps).append(",");
+            csv.append(faster).append(",");
+            csv.append(String.format("%.2f", timeDiff)).append("\n");
+        }
+
+        // Write CSV file
+        try (FileWriter writer = new FileWriter(csvFile)) {
+            writer.write(csv.toString());
+        }
+    }
+
+    private static List<Graph> readGraphsFromJson(String filename) throws IOException {
+        String content = new String(java.nio.file.Files.readAllBytes(
+                java.nio.file.Paths.get(filename)));
+
+        JSONObject json = new JSONObject(content);
+        JSONArray graphsArray = json.getJSONArray("graphs");
+
+        List<Graph> graphs = new ArrayList<>();
+
+        for (int i = 0; i < graphsArray.length(); i++) {
+            JSONObject graphJson = graphsArray.getJSONObject(i);
+
+            int id = graphJson.getInt("id");
+
+            JSONArray nodesArray = graphJson.getJSONArray("nodes");
+            List<String> nodes = new ArrayList<>();
+            for (int j = 0; j < nodesArray.length(); j++) {
+                nodes.add(nodesArray.getString(j));
+            }
+
+            JSONArray edgesArray = graphJson.getJSONArray("edges");
+            List<Edge> edges = new ArrayList<>();
+            for (int j = 0; j < edgesArray.length(); j++) {
+                JSONObject edgeJson = edgesArray.getJSONObject(j);
+                edges.add(new Edge(
+                        edgeJson.getString("from"),
+                        edgeJson.getString("to"),
+                        edgeJson.getInt("weight")
+                ));
+            }
+
+            graphs.add(new Graph(id, nodes, edges));
+        }
+
+        return graphs;
+    }
+
+    private static JSONArray edgesToJsonArray(List<Edge> edges) {
+        JSONArray array = new JSONArray();
+        for (Edge edge : edges) {
+            JSONObject edgeJson = new JSONObject();
+            edgeJson.put("from", edge.getFrom());
+            edgeJson.put("to", edge.getTo());
+            edgeJson.put("weight", edge.getWeight());
+            array.put(edgeJson);
+        }
+        return array;
+    }
+}
