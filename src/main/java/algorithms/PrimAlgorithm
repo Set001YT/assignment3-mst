@@ -1,0 +1,91 @@
+package algorithms;
+
+import graph.Edge;
+import graph.Graph;
+import java.util.*;
+
+/**
+ * Implementation of Prim's algorithm for finding Minimum Spanning Tree
+ */
+public class PrimAlgorithm {
+
+    public record MSTResult(List<Edge> mstEdges, int totalCost, int operationsCount, double executionTimeMs) {
+    }
+
+    public MSTResult findMST(Graph graph) {
+        long startTime = System.nanoTime();
+
+        List<Edge> mstEdges = new ArrayList<>();
+        int totalCost = 0;
+        int operationsCount = 0;
+
+        double executionTimeMs;
+        if (graph.getNodes().isEmpty()) {
+            long endTime = System.nanoTime();
+            executionTimeMs = (endTime - startTime) / 1_000_000.0;
+            return new MSTResult(mstEdges, totalCost, operationsCount, executionTimeMs);
+        }
+
+        Set<String> visited = new HashSet<>();
+        PriorityQueue<EdgeWithNode> pq = new PriorityQueue<>();
+
+        // Start from the first node
+        String startNode = graph.getNodes().get(0);
+        visited.add(startNode);
+        operationsCount++; // Initial node addition
+
+        // Add all edges from start node to priority queue
+        for (Edge edge : graph.getAdjacentEdges(startNode)) {
+            pq.offer(new EdgeWithNode(edge, edge.getTo()));
+            operationsCount++; // graph.Edge insertion
+        }
+
+        // Main algorithm loop
+        while (!pq.isEmpty() && visited.size() < graph.getVertexCount()) {
+            EdgeWithNode current = pq.poll();
+            operationsCount++; // Poll operation
+
+            String nextNode = current.targetNode;
+
+            // Skip if already visited
+            if (visited.contains(nextNode)) {
+                operationsCount++; // Comparison
+                continue;
+            }
+
+            // Add edge to MST
+            mstEdges.add(current.edge);
+            totalCost += current.edge.getWeight();
+            visited.add(nextNode);
+            operationsCount += 2; // Addition and visit marking
+
+            // Add all edges from newly visited node
+            for (Edge edge : graph.getAdjacentEdges(nextNode)) {
+                if (!visited.contains(edge.getTo())) {
+                    pq.offer(new EdgeWithNode(edge, edge.getTo()));
+                    operationsCount += 2; // Check and insertion
+                }
+            }
+        }
+
+        long endTime = System.nanoTime();
+        executionTimeMs = (endTime - startTime) / 1000000.0;
+
+        return new MSTResult(mstEdges, totalCost, operationsCount, executionTimeMs);
+    }
+
+    private static class EdgeWithNode implements Comparable<EdgeWithNode> {
+        final Edge edge;
+        final String targetNode;
+
+        EdgeWithNode(Edge edge, String targetNode) {
+            this.edge = edge;
+            this.targetNode = targetNode;
+        }
+
+        @Override
+        public int compareTo(EdgeWithNode other) {
+            return Integer.compare(this.edge.getWeight(), other.edge.getWeight());
+        }
+    }
+}
