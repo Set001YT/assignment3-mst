@@ -1,0 +1,109 @@
+package algorithms;
+
+import graph.Edge;
+import graph.Graph;
+import java.util.*;
+
+/**
+ * Implementation of Kruskal's algorithm for finding Minimum Spanning Tree
+ * Uses Union-Find (Disjoint Set Union) data structure
+ */
+public class KruskalAlgorithm {
+
+    public record MSTResult(List<Edge> mstEdges, int totalCost, int operationsCount, double executionTimeMs) {
+    }
+
+    public MSTResult findMST(Graph graph) {
+        long startTime = System.nanoTime();
+
+        List<Edge> mstEdges = new ArrayList<>();
+        int totalCost = 0;
+        int operationsCount = 0;
+
+        double executionTimeMs;
+        if (graph.getNodes().isEmpty()) {
+            long endTime = System.nanoTime();
+            executionTimeMs = (endTime - startTime) / 1000000.0;
+            return new MSTResult(mstEdges, totalCost, operationsCount, executionTimeMs);
+        }
+
+        // Sort edges by weight
+        List<Edge> sortedEdges = new ArrayList<>(graph.getEdges());
+        Collections.sort(sortedEdges);
+        operationsCount += sortedEdges.size(); // Sorting operations (simplified count)
+
+        // Initialize Union-Find
+        UnionFind uf = new UnionFind(graph.getNodes());
+
+        // Process edges in order of increasing weight
+        for (Edge edge : sortedEdges) {
+            operationsCount++; // Edge processing
+
+            String root1 = uf.find(edge.getFrom());
+            String root2 = uf.find(edge.getTo());
+            operationsCount += 2; // Two find operations
+
+            // If nodes are in different sets, add edge to MST
+            if (!root1.equals(root2)) {
+                mstEdges.add(edge);
+                totalCost += edge.getWeight();
+                uf.union(edge.getFrom(), edge.getTo());
+                operationsCount += 2; // Comparison and union
+
+                // Stop if MST is complete
+                if (mstEdges.size() == graph.getVertexCount() - 1) {
+                    break;
+                }
+            }
+        }
+
+        long endTime = System.nanoTime();
+        executionTimeMs = (endTime - startTime) / 1_000_000.0;
+
+        return new MSTResult(mstEdges, totalCost, operationsCount, executionTimeMs);
+    }
+
+    /**
+     * Union-Find (Disjoint Set Union) data structure with path compression
+     */
+    private static class UnionFind {
+        private final Map<String, String> parent;
+        private final Map<String, Integer> rank;
+
+        public UnionFind(List<String> nodes) {
+            parent = new HashMap<>();
+            rank = new HashMap<>();
+            for (String node : nodes) {
+                parent.put(node, node);
+                rank.put(node, 0);
+            }
+        }
+
+        public String find(String node) {
+            if (!parent.get(node).equals(node)) {
+                parent.put(node, find(parent.get(node))); // Path compression
+            }
+            return parent.get(node);
+        }
+
+        public void union(String node1, String node2) {
+            String root1 = find(node1);
+            String root2 = find(node2);
+
+            if (root1.equals(root2)) return;
+
+            // Union by rank
+            int rank1 = rank.get(root1);
+            int rank2 = rank.get(root2);
+
+            if (rank1 < rank2) {
+                parent.put(root1, root2);
+            } else if (rank1 > rank2) {
+                parent.put(root2, root1);
+            } else {
+                parent.put(root2, root1);
+                rank.put(root1, rank1 + 1);
+            }
+        }
+    }
+}
