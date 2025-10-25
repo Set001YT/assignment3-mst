@@ -35,7 +35,10 @@ assignment3-mst/
 │   ├── output.json            # Algorithm results (JSON)
 │   └── output.csv             # Algorithm results (CSV)
 ├── README.md                  # Main documentation(analysis report) of the assignment
-└── pom.xml                    # Maven configuration
+├── pom.xml                    # Maven configuration
+└── screenshots/
+    ├── screenshots_graph_class # Screenshots of code from Graph.java
+    └── screenshots_graph_loading_&_mst_computation # Screenshots of graph loading & mst computation
 ```
 
 ---
@@ -274,6 +277,57 @@ All automated tests passed successfully:
 Run tests with: `mvn test`
 
 ---
+
+### Bonus: Graph and Edge Classes (+10%)
+
+I implemented custom Graph.java and Edge.java classes for better code architecture.
+
+#### Implementation Details
+
+**Edge.java:**
+- Represents a weighted edge between two vertices
+- Implements `Comparable` for sorting in Kruskal's algorithm
+- Immutable design for thread safety
+
+**Graph.java:**
+- Stores graph using adjacency list representation
+- Provides methods: `getNodes()`, `getEdges()`, `getAdjacentEdges()`
+- Includes connectivity check using BFS algorithm
+- Used as input for both Prim's and Kruskal's implementations
+
+#### Screenshots
+
+**1. Graph class implementation:**
+
+Check the screenshots/screenshots_graph_class
+
+*Figure 1: Graph.java implementation with adjacency list*
+
+**2. Graph loading from JSON:**
+
+Check the screenshots/screenshots_graph_loading_&_mst_computation
+
+*Figure 2: Successfully loaded graph structure with 30 vertices and 43 edges*
+
+**3. MST computation using Graph object:**
+
+Check the screenshots/screenshots_graph_loading_&_mst_computation
+
+*Figure 3: Prim's and Kruskal's algorithms working with Graph class*
+
+#### Integration
+
+Both algorithms use the Graph class directly:
+```java
+PrimAlgorithm prim = new PrimAlgorithm();
+KruskalAlgorithm kruskal = new KruskalAlgorithm();
+
+Graph cityNetwork = readGraphFromJson("input.json");
+MSTResult primResult = prim.findMST(cityNetwork);
+MSTResult kruskalResult = kruskal.findMST(cityNetwork);
+```
+
+This demonstrates proper object-oriented design and separation of concerns.
 
 ## Conclusions
 
