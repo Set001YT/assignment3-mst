@@ -1,0 +1,92 @@
+package graph;
+
+import java.util.*;
+
+/**
+ * Represents a weighted undirected graph for MST algorithms
+ */
+public class Graph {
+    private final int id;
+    private final List<String> nodes;
+    private final List<Edge> edges;
+    private final Map<String, List<Edge>> adjacencyList;
+
+    public Graph(int id, List<String> nodes, List<Edge> edges) {
+        this.id = id;
+        this.nodes = new ArrayList<>(nodes);
+        this.edges = new ArrayList<>(edges);
+        this.adjacencyList = new HashMap<>();
+        buildAdjacencyList();
+    }
+
+    private void buildAdjacencyList() {
+        for (String node : nodes) {
+            adjacencyList.put(node, new ArrayList<>());
+        }
+        for (Edge edge : edges) {
+            adjacencyList.get(edge.getFrom()).add(edge);
+            adjacencyList.get(edge.getTo()).add(new Edge(edge.getTo(), edge.getFrom(), edge.getWeight()));
+        }
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public List<String> getNodes() {
+        return new ArrayList<>(nodes);
+    }
+
+    public List<Edge> getEdges() {
+        return new ArrayList<>(edges);
+    }
+
+    public int getVertexCount() {
+        return nodes.size();
+    }
+
+    public int getEdgeCount() {
+        return edges.size();
+    }
+
+    public List<Edge> getAdjacentEdges(String node) {
+        return new ArrayList<>(adjacencyList.getOrDefault(node, new ArrayList<>()));
+    }
+
+    /**
+     * Checks if the graph is connected using BFS
+     */
+    public boolean isConnected() {
+        if (nodes.isEmpty()) return true;
+
+        Set<String> visited = new HashSet<>();
+        Queue<String> queue = new LinkedList<>();
+
+        queue.offer(nodes.getFirst());
+        visited.add(nodes.getFirst());
+
+        while (!queue.isEmpty()) {
+            String current = queue.poll();
+            for (Edge edge : adjacencyList.get(current)) {
+                if (!visited.contains(edge.getTo())) {
+                    visited.add(edge.getTo());
+                    queue.offer(edge.getTo());
+                }
+            }
+        }
+
+        return visited.size() == nodes.size();
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append(String.format("graph.Graph %d: %d vertices, %d edges\n", id, getVertexCount(), getEdgeCount()));
+        sb.append("Nodes: ").append(nodes).append("\n");
+        sb.append("Edges:\n");
+        for (Edge edge : edges) {
+            sb.append("  ").append(edge).append("\n");
+        }
+        return sb.toString();
+    }
+}
