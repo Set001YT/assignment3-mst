@@ -1,0 +1,216 @@
+package main;
+
+import java.io.*;
+import java.util.*;
+import org.json.*;
+
+/**
+ * Generates test graphs of various sizes and densities for MST testing
+ */
+public class GraphGenerator {
+    private static final Random random = new Random(42); // Fixed seed for reproducibility
+
+    public static void main(String[] args) {
+        try {
+            generateTestGraphs("test_graphs.json");
+            System.out.println("Test graphs generated successfully!");
+            System.out.println("Check the test_graphs.json file!");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void generateTestGraphs(String outputFile) throws IOException {
+        JSONObject json = new JSONObject();
+        JSONArray graphs = new JSONArray();
+
+        int graphId = 1;
+
+        // Small graphs (4-6 vertices) - for correctness testing
+        graphs.put(generateGraph(graphId++, 4, 0.70));
+        graphs.put(generateGraph(graphId++, 5, 0.60));
+        graphs.put(generateGraph(graphId++, 6, 0.8));
+
+        // Medium graphs (10-15 vertices) - for moderate testing
+        graphs.put(generateGraph(graphId++, 10, 0.50));
+        graphs.put(generateGraph(graphId++, 12, 0.40));
+        graphs.put(generateGraph(graphId++, 15, 0.60));
+
+        // Large graphs (20-30+ vertices) - for scalability testing
+        graphs.put(generateGraph(graphId++, 20, 0.30));
+        graphs.put(generateGraph(graphId++, 25, 0.40));
+        graphs.put(generateGraph(graphId++, 30, 0.35));
+
+        json.put("graphs", graphs);
+
+        try (FileWriter file = new FileWriter(outputFile)) {
+            file.write(json.toString(2));
+        }
+    }
+
+    private static JSONObject generateGraph(int id, int numVertices, double density) {
+        JSONObject graph = new JSONObject();
+        graph.put("id", id);
+
+        // Generate node names
+        List<String> nodes = new ArrayList<>();
+        for (int i = 0; i < numVertices; i++) {
+            nodes.add(generateNodeName(i));
+        }
+        JSONArray nodesArray = new JSONArray(nodes);
+        graph.put("nodes", nodesArray);
+
+        // Generate edges
+        Set<String> edgeSet = new HashSet<>();
+        JSONArray edges = new JSONArray();
+
+        // First, ensure connectivity by creating a spanning tree
+        List<Integer> connected = new ArrayList<>();
+        List<Integer> notConnected = new ArrayList<>();
+        for (int i = 0; i < numVertices; i++) {
+            notConnected.add(i);
+        }
+
+        // Start with random vertex
+        connected.add(notConnected.remove(random.nextInt(notConnected.size())));
+
+        // Connect all vertices
+        while (!notConnected.isEmpty()) {
+            int fromIdx = connected.get(random.nextInt(connected.size()));
+            int toIdx = notConnected.remove(random.nextInt(notConnected.size()));
+
+            String from = nodes.get(fromIdx);
+            String to = nodes.get(toIdx);
+            int weight = random.nextInt(20) + 1;
+
+            addEdge(edges, edgeSet, from, to, weight);
+            connected.add(toIdx);
+        }
+
+        // Add additional edges based on density
+        int maxEdges = numVertices * (numVertices - 1) / 2;
+        int targetEdges = (int) (maxEdges * density);
+
+        while (edges.length() < targetEdges) {
+            int from = random.nextInt(numVertices);
+            int to = random.nextInt(numVertices);
+
+            if (from != to) {
+                String fromNode = nodes.get(from);
+                String toNode = nodes.get(to);
+                int weight = random.nextInt(20) + 1;
+
+                addEdge(edges, edgeSet, fromNode, toNode, weight);
+            }
+        }
+
+        graph.put("edges", edges);
+        return graph;
+    }
+
+    private static JSONObject generateLinearGraph(int id, int numVertices) {
+        JSONObject graph = new JSONObject();
+        graph.put("id", id);
+
+        List<String> nodes = new ArrayList<>();
+        for (int i = 0; i < numVertices; i++) {
+            nodes.add(generateNodeName(i));
+        }
+        graph.put("nodes", new JSONArray(nodes));
+
+        JSONArray edges = new JSONArray();
+        for (int i = 0; i < numVertices - 1; i++) {
+            JSONObject edge = new JSONObject();
+            edge.put("from", nodes.get(i));
+            edge.put("to", nodes.get(i + 1));
+            edge.put("weight", random.nextInt(15) + 1);
+            edges.put(edge);
+        }
+
+        graph.put("edges", edges);
+        return graph;
+    }
+
+    private static JSONObject generateCompleteGraph(int id, int numVertices) {
+        JSONObject graph = new JSONObject();
+        graph.put("id", id);
+
+        List<String> nodes = new ArrayList<>();
+        for (int i = 0; i < numVertices; i++) {
+            nodes.add(generateNodeName(i));
+        }
+        graph.put("nodes", new JSONArray(nodes));
+
+        JSONArray edges = new JSONArray();
+        for (int i = 0; i < numVertices; i++) {
+            for (int j = i + 1; j < numVertices; j++) {
+                JSONObject edge = new JSONObject();
+                edge.put("from", nodes.get(i));
+                edge.put("to", nodes.get(j));
+                edge.put("weight", random.nextInt(20) + 1);
+                edges.put(edge);
+            }
+        }
+
+        graph.put("edges", edges);
+        return graph;
+    }
+
+    private static JSONObject generateDisconnectedGraph(int id, int numVertices) {
+        JSONObject graph = new JSONObject();
+        graph.put("id", id);
+
+        List<String> nodes = new ArrayList<>();
+        for (int i = 0; i < numVertices; i++) {
+            nodes.add(generateNodeName(i));
+        }
+        graph.put("nodes", new JSONArray(nodes));
+
+        JSONArray edges = new JSONArray();
+
+        // Create two separate components
+        int mid = numVertices / 2;
+
+        // First component
+        for (int i = 0; i < mid - 1; i++) {
+            JSONObject edge = new JSONObject();
+            edge.put("from", nodes.get(i));
+            edge.put("to", nodes.get(i + 1));
+            edge.put("weight", random.nextInt(10) + 1);
+            edges.put(edge);
+        }
+
+        // Second component
+        for (int i = mid; i < numVertices - 1; i++) {
+            JSONObject edge = new JSONObject();
+            edge.put("from", nodes.get(i));
+            edge.put("to", nodes.get(i + 1));
+            edge.put("weight", random.nextInt(10) + 1);
+            edges.put(edge);
+        }
+
+        graph.put("edges", edges);
+        return graph;
+    }
+
+    private static void addEdge(JSONArray edges, Set<String> edgeSet,
+                                String from, String to, int weight) {
+        String edgeKey = from.compareTo(to) < 0 ? from + "-" + to : to + "-" + from;
+        if (!edgeSet.contains(edgeKey)) {
+            edgeSet.add(edgeKey);
+            JSONObject edge = new JSONObject();
+            edge.put("from", from);
+            edge.put("to", to);
+            edge.put("weight", weight);
+            edges.put(edge);
+        }
+    }
+
+    private static String generateNodeName(int index) {
+        if (index < 26) {
+            return String.valueOf((char) ('A' + index));
+        } else {
+            return "N" + index;
+        }
+    }
+}
